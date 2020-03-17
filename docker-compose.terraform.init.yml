@@ -1,0 +1,19 @@
+version: '3.7'
+services:
+  terraform:
+    command: >-
+      init
+      -backend-config=access_key=${AWS_ACCESS_KEY_ID}
+      -backend-config=bucket=${TERRAFORM_STATE_BUCKET}
+      -backend-config=key=jellyfin
+      -backend-config=region=${AWS_REGION}
+      -backend-config=secret_key=${AWS_SECRET_ACCESS_KEY}
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - type: bind
+        source: ./
+        target: /jellyfin
+    tty: true
+    stdin_open: true
