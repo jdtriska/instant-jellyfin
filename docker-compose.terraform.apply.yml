@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  terraform:
+    command: apply "/instant-jellyfin/.tfplan"
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - type: bind
+        source: ./
+        target: /instant-jellyfin
+    tty: true
+    stdin_open: true
