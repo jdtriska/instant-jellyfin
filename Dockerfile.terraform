@@ -1,2 +1,2 @@
 FROM hashicorp/terraform:0.12.23
-WORKDIR /jellyfin
+WORKDIR /instant-jellyfin

@@ -56,18 +56,50 @@ resource "aws_s3_bucket" "jellyfin_media" {
 resource "aws_instance" "jellyfin_server" {
   # ...
 
-  provisioner "remote-exec" {
-    inline = [
-      "yum install -y docker",
-      "(crontab -l 2>/dev/null; echo "*/5 * * * * /path/to/job -with args") | crontab -",
-      "RUN JELLYFIN SERVER",
-      "RUN NGINX REVERSE PROXY"
-    ]
+  provisioner "file" {
+    content = <<EOF
+sudo amazon-linux-extras enable nginx1
+sudo yum install -y docker nginx
+EOF
+    destination = "/jellyfin/scripts/setup.sh"
   }
 
-  provisioner "file" {
-    content = EOF=
-    destination = "/etc/myapp.conf"
+    provisioner "file" {
+    content = <<EOF
+
+(sudo crontab -l 2>/dev/null; echo "*/5 * * * * /path/to/job -with args") | crontab -
+EOF
+    destination = "/jellyfin/scripts/start-s3sync.sh"
+  }
+
+    provisioner "file" {
+    content = <<EOF
+docker run -d \
+ --volume /jellyfin/config:/config \
+ --volume /jellyfin/cache:/cache \
+ --volume /jellyfin/media:/media \
+ --user 1000:1000 \
+ --net=host \
+ --restart=unless-stopped \
+ jellyfin/jellyfin
+EOF
+    destination = "/jellyfin/scripts/start-jellyfin.sh"
+  }
+
+    provisioner "file" {
+    content = <<EOF
+
+EOF
+    destination = "/jellyfin/scripts/start-nginx.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sh /jellyfin/setup.sh",
+      "sh /jellyfin/s3sync.sh",
+      "sh /jellyfin/start-jellyfin.sh",
+      "sh /jellyfin/start-nginx.sh"
+    ]
   }
 
   tags = {

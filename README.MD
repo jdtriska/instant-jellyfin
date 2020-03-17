@@ -24,6 +24,8 @@ These instructions will walk you through the entire process of setting up a Jell
 	* `AWS_ACCESS_KEY_ID`: This is your access key ID from AWS. See _Prequisites_ for instructions on getting this.
 	* `AWS_REGION`: This is the AWS region in which your Jellyfin instance will run. This should be close to where you'll be streaming the most from. See [this page](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html) for an overview of possible regions. You must use the lowercase-and-hyphen form of the region, e.g. `us-east-1`.
 	* `AWS_SECRET_ACCESS_KEY`: This is your secret access key from AWS. See _Prequisites_ for instructions on getting this.
+	* `EBS_VOLUME_SIZE`: 
+	* `EC2_INSTANCE_TYPE`: This is the type and size of the server you'll be running the Jellyfin instance on. See https://aws.amazon.com/ec2/instance-types/ for details on what types of instances are available. I would recommend something relatively small to start, especially if you're planning to primarily direct stream media instead of having Jellyfin transcode. The instance types should be of the form `type.size`, for instance, a `t3a.small` would make a good starting instance type.
 	* `ENVIRONMENT`: This is an arbitrary name for your environment, to avoid conflicts if you decide to deploy multiple Jellyfin instances. I suggest a cool name, like _godzilla_.
 	* `HOSTED_ZONE_ID`: (OPTIONAL) If you would like your Jellyfin instance to be available on a custom, nice and pretty domain, you will fill this in. See _(Optional) Configuring DNS_ under the _Deployment_ section below for the steps to do this.
 	* `TERRAFORM_STATE_BUCKET`: This is an S3 bucket you will create that will store the configuration of your Terraform backend. Terraform is the tool that lets us write infrastructure like code and tell AWS what resources we need to create. You'll definitely want to use a remote backend like S3 so you don't lose track of your infrastructure state if something happens to your local computer.
@@ -72,7 +74,7 @@ Once you've uploaded media into the folders as shown above, you should log in to
 ## Managing your instance
 If you need to manage your instance, such as restarting your docker container or manually messing around with files on your server, you should follow [AWS's instructions for connecting to your instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-connect-methods.html). I like use SSH in Ubuntu or Ubuntu through WSL (Windows Subsystem for Linux), but of course AWS provides a lovely browser-based SSH terminal as well.
 
-From your SSH terminal, you can do pretty much everything you could possibly need to do.
+The Terraform setup creates scripts on the server under the `/jellyfin/scripts` folder to set up dependencies on the EC2 instance and start the necessary services. You can manually start, stop, or re-run these as necessary through SSH. The scripts are designed to be idempotent, that is, they're designed so that they won't break anything if you run them multiple times. The start scripts will fully restart the associated services if you run them again.
 
 If you need to totally destroy and re-create your Jellyfin instance to start over, you can use terraform taint, then re-run the deploy steps. You can taint a resource by running `docker-compose -f docker-compose.terraform.plan.yml run terraform taint resource_type.resource_name`, which will force it to be destroyed and re-created. Of course, substitute the resource type and name you want to re-create from the terraform code. For the EC2 instance, that would be `aws_instance.jellyfin_server`.
 
@@ -103,6 +105,8 @@ If you want to totally wipe out your infrastructure, you can do the following:
 * This setup also leaves your SSH port open on the server so it's easier to configure. If you are not happy with that, it's easy to change in the Terraform.
 * This setup just uses `crontab` to run `aws s3 sync` every 5 minutes to update your media library from S3. Again, feel free to customize and if you come up with a way more awesome solution, please create a PR!
 * This project uses docker-compose to run Terraform commands inside a Terraform container to avoid having to deal with configuration issues on your local machine. Each docker-compose `.yml` file has a separate command and environment variable mapping. I like this setup because it's easy to use, easy to version, and easy to modify. If you don't like this, I'm always open to suggestions.
+* For simplicity, the paths in the setup and start scripts are absolute paths and cannot be configured. If you need to run jellyfin and the associated services from different folders, feel free to configure the terraform code as you like, or upgrade it to support configurable folder paths.
+* This project doesn't support having a separate EBS volume to stage media. It would be a nice-to-have, but too time consuming right now. Again, this would be a neat area for someone to take a look at (or better yet, get mo)
 
 ## Contributing
 
