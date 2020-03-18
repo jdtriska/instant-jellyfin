@@ -158,8 +158,8 @@ resource "aws_security_group" "jellyfin_server_sg" {
 }
 
 resource "aws_key_pair" "jellyfin_keys" {
-  key_name   = "${var.ENVIRONMENT}-jellyfin-key"
-  public_key = file(".ssh/${var.ENVIRONMENT}-jellyfin-key.pub")
+  key_name   = "jellyfin-key"
+  public_key = file(".ssh/jellyfin-key.pub")
 }
 
 resource "aws_instance" "jellyfin_server" {
@@ -175,7 +175,7 @@ resource "aws_instance" "jellyfin_server" {
   connection {
     type     = "ssh"
     user     = "ec2-user"
-    private_key = file(".ssh/${var.ENVIRONMENT}-jellyfin-key")
+    private_key = file(".ssh/jellyfin-key")
     host     = self.public_ip
   }
 
