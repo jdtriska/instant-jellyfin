@@ -216,10 +216,6 @@ If you want to totally wipe out your infrastructure, you can do the following:
 	* This will ask you to confirm destruction. Open a second terminal and run `docker attach jellyfin_terraform_1`. You can then type into the second terminal and it will feed that input to the container running in the first terminal.
 	* This will really destroy everything, so be sure you want to proceed.
 
-## Running multiple instances
-
-If you want to run multiple instances, simply change `TERRAFORM_STATE_BUCKET` and the `ENVIRONMENT` in your `.env` file, run the Terraform init step again, then re-deploy. Terraform init will ask you whether you want to copy over the previous state to the new backend. Unless you are _moving_ your state, you should answer "no" to start fresh. You can swap back and forth between instances by repeating this process.
-
 ## Built With
 
 * [Jellyfin](https://github.com/jellyfin/jellyfin) - The real deal, this is where the magic happens, my project is just to make setup on AWS easier.

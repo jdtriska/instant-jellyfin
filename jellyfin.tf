@@ -140,22 +140,45 @@ resource "aws_security_group" "jellyfin_server_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    security_groups = [aws_security_group.jellyfin_alb_sg.name]
+    security_groups = [aws_security_group.jellyfin_alb_sg.id]
   }
+
+  ingress {
+    description = "SSH from anywhere"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags = {
     Name        = "${var.ENVIRONMENT}-jellyfin-server-sg"
     Environment = var.ENVIRONMENT
   }
 }
 
+resource "aws_key_pair" "jellyfin_keys" {
+  key_name   = "${var.ENVIRONMENT}-jellyfin-key"
+  public_key = file(".ssh/${var.ENVIRONMENT}-jellyfin-key.pub")
+}
+
 resource "aws_instance" "jellyfin_server" {
+  key_name = aws_key_pair.jellyfin_keys.key_name
   ami = data.aws_ami.amazon_linux_2.id
   instance_type = var.EC2_INSTANCE_TYPE
   iam_instance_profile = aws_iam_instance_profile.jellyfin_instance_profile.name
   root_block_device {
     volume_size = var.EBS_VOLUME_SIZE
   }
-  security_groups = []
+  security_groups = [aws_security_group.jellyfin_server_sg.name]
+
+  connection {
+    type     = "ssh"
+    user     = "ec2-user"
+    private_key = file(".ssh/${var.ENVIRONMENT}-jellyfin-key")
+    host     = self.public_ip
+  }
+
   provisioner "file" {
     content = <<EOF
 server {
@@ -265,6 +288,16 @@ EOF
  *   if you've provided a domain.
  */
 
+resource "aws_default_vpc" "default" { }
+
+resource "aws_default_subnet" "default_a" {
+  availability_zone = "${var.AWS_REGION}a"
+}
+
+resource "aws_default_subnet" "default_b" {
+  availability_zone = "${var.AWS_REGION}b"
+}
+
 resource "aws_security_group" "jellyfin_alb_sg" {
   name = "${var.ENVIRONMENT}-jellyfin-alb-sg"
   description = "Security group which allows HTTP/S access from anywhere"
@@ -315,7 +348,7 @@ resource "aws_lb" "jellyfin_alb" {
   load_balancer_type = "application"
   internal = false
   security_groups = [aws_security_group.jellyfin_alb_sg.id]
-
+  subnets = [aws_default_subnet.default_a.id, aws_default_subnet.default_b.id]
   tags = {
     Name        = "${var.ENVIRONMENT}-jellyfin-alb"
     Environment = var.ENVIRONMENT
@@ -326,6 +359,7 @@ resource "aws_lb_target_group" "jellyfin_tg" {
   name     = "${var.ENVIRONMENT}-jellyfin-tg"
   port     = 80
   protocol = "HTTP"
+  vpc_id = aws_default_vpc.default.id
 
   health_check {
     enabled = true
