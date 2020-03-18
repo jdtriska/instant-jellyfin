@@ -11,12 +11,131 @@ These instructions will walk you through the entire process of setting up a Jell
 
 ### Prerequisites
 
+Forgive me, some of these are basic, but I list them here for less technical users.
+
 1. You'll need to install docker and docker-compose to run this project. Please see https://docs.docker.com/install/ and https://docs.docker.com/compose/install/ for instructions on installing docker and docker compose on your system. Everything runs in docker containers to avoid any incompatibility issues with your system.
 1. You'll need an AWS account with full administrator access. This guide assumes you're running this on your own personal AWS account, and that the AWS credentials you use have no restrictions. See https://aws.amazon.com/premiumsupport/knowledge-center/create-and-activate-aws-account/ for details on creating an AWS account.
 1. You'll need your AWS access keys. See https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html for details on getting those from the AWS console.
 1. You'll need to know how to clone this project from Github. See https://help.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository for details.
 1. You'll need to know how to use a command line terminal. There are many tutorials out there for doing this, so I'll leave finding one for your system as an exercise for the reader.
-1. I would highly recommend you sort out your encoding pipeline ahead of time to make sure you have videos in the appropriate format and bitrate for streaming via Jellyfin. I use Handbrake and the Nvidia NVEnc H.264 codec for converting Blu-ray files from MakeMKV. I've included a handbrake preset for your convenience (see the included `jellyfin-handbrake.json`), although you should especially check the subtitle conversion when you run a transcode.
+1. I would highly recommend you sort out your encoding pipeline ahead of time to make sure you have videos in the appropriate format and bitrate for streaming via Jellyfin. I use Handbrake and the Nvidia NVEnc H.264 codec for converting Blu-ray files from MakeMKV. I've included the handbrake preset file below for your convenience. Simply save as a `.json` file and import to Handbrake. Make sure to check your subtitle settings, since Handbrake doesn't seem to get them correct even with a preset.
+
+```
+{
+  "PresetList": [
+    {
+      "AlignAVStart": true,
+      "AudioCopyMask": [
+        "copy:aac",
+        "copy:ac3",
+        "copy:dtshd",
+        "copy:dts",
+        "copy:mp3",
+        "copy:truehd",
+        "copy:flac",
+        "copy:eac3"
+      ],
+      "AudioEncoderFallback": "av_aac",
+      "AudioLanguageList": [
+        "any"
+      ],
+      "AudioList": [
+        {
+          "AudioBitrate": 160,
+          "AudioCompressionLevel": 0.0,
+          "AudioEncoder": "av_aac",
+          "AudioMixdown": "stereo",
+          "AudioNormalizeMixLevel": false,
+          "AudioSamplerate": "auto",
+          "AudioTrackQualityEnable": false,
+          "AudioTrackQuality": -1.0,
+          "AudioTrackGainSlider": 0.0,
+          "AudioTrackDRCSlider": 0.0
+        }
+      ],
+      "AudioSecondaryEncoderMode": true,
+      "AudioTrackSelectionBehavior": "all",
+      "ChapterMarkers": true,
+      "ChildrenArray": [],
+      "Default": false,
+      "FileFormat": "mp4",
+      "Folder": false,
+      "FolderOpen": false,
+      "Mp4HttpOptimize": true,
+      "Mp4iPodCompatible": false,
+      "PictureAutoCrop": true,
+      "PictureBottomCrop": 22,
+      "PictureLeftCrop": 0,
+      "PictureRightCrop": 0,
+      "PictureTopCrop": 22,
+      "PictureDARWidth": 1920,
+      "PictureDeblockPreset": "off",
+      "PictureDeblockTune": "medium",
+      "PictureDeblockCustom": "strength=strong:thresh=20:blocksize=8",
+      "PictureDeinterlaceFilter": "decomb",
+      "PictureCombDetectPreset": "default",
+      "PictureCombDetectCustom": "",
+      "PictureDeinterlacePreset": "default",
+      "PictureDeinterlaceCustom": "",
+      "PictureDenoiseCustom": "",
+      "PictureDenoiseFilter": "off",
+      "PictureDenoisePreset": "light",
+      "PictureDenoiseTune": "none",
+      "PictureSharpenCustom": "",
+      "PictureSharpenFilter": "off",
+      "PictureSharpenPreset": "medium",
+      "PictureSharpenTune": "none",
+      "PictureDetelecine": "off",
+      "PictureDetelecineCustom": "",
+      "PictureItuPAR": false,
+      "PictureKeepRatio": true,
+      "PictureLooseCrop": false,
+      "PictureModulus": 2,
+      "PicturePAR": "auto",
+      "PicturePARWidth": 1,
+      "PicturePARHeight": 1,
+      "PictureForceHeight": 0,
+      "PictureForceWidth": 0,
+      "PresetDescription": "Preset for HD Jellyfin streaming",
+      "PresetName": "jellyfin-streaming",
+      "Type": 1,
+      "UsesPictureFilters": false,
+      "UsesPictureSettings": 2,
+      "SubtitleAddCC": true,
+      "SubtitleAddForeignAudioSearch": false,
+      "SubtitleAddForeignAudioSubtitle": false,
+      "SubtitleBurnBehavior": "none",
+      "SubtitleBurnBDSub": false,
+      "SubtitleBurnDVDSub": false,
+      "SubtitleLanguageList": [
+        "any"
+      ],
+      "SubtitleTrackSelectionBehavior": "all",
+      "VideoAvgBitrate": 5000,
+      "VideoColorMatrixCode": 0,
+      "VideoEncoder": "nvenc_h264",
+      "VideoFramerateMode": "cfr",
+      "VideoGrayScale": false,
+      "VideoScaler": "swscale",
+      "VideoPreset": "slow",
+      "VideoTune": "",
+      "VideoProfile": "auto",
+      "VideoLevel": "auto",
+      "VideoOptionExtra": "",
+      "VideoQualityType": 1,
+      "VideoQualitySlider": 22.0,
+      "VideoQSVDecode": false,
+      "VideoQSVAsyncDepth": 4,
+      "VideoTwoPass": false,
+      "VideoTurboTwoPass": false,
+      "x264UseAdvancedOptions": false
+    }
+  ],
+  "VersionMajor": 42,
+  "VersionMicro": 0,
+  "VersionMinor": 0
+}
+```
 
 ### Project Setup
 
