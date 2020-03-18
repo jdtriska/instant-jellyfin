@@ -6,7 +6,7 @@ services:
       - .env
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile.terraform
     volumes:
       - type: bind
         source: ./

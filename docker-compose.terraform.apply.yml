@@ -4,7 +4,7 @@ services:
     command: apply "/instant-jellyfin/.tfplan"
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile.terraform
     volumes:
       - type: bind
         source: ./

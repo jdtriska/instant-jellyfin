@@ -10,7 +10,7 @@ services:
       -backend-config=secret_key=${AWS_SECRET_ACCESS_KEY}
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile.terraform
     volumes:
       - type: bind
         source: ./
