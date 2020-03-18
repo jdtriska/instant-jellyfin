@@ -110,10 +110,7 @@ resource "aws_iam_instance_profile" "jellyfin_instance_profile" {
 
 data "aws_ami" "amazon_linux_2" {
  most_recent = true
-  filter {
-    name   = "owner-alias"
-    values = ["amazon"]
-  }
+  owners = ["amazon"]
   filter {
     name   = "name"
     values = ["amzn2-ami-hvm*"]
@@ -163,7 +160,7 @@ resource "aws_instance" "jellyfin_server" {
     content = <<EOF
 server {
   listen 80;
-    server_name ${trimsuffix(data.aws_route53_zone.jellyfin_domain.name,".")};
+    server_name ${var.HOSTED_ZONE_ID == "" ? aws_lb.jellyfin_alb.dns_name : trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".") };
   location / {
     # Proxy main Jellyfin traffic
     proxy_pass http://localhost:8096/;
@@ -293,21 +290,24 @@ resource "aws_security_group" "jellyfin_alb_sg" {
 }
 
 resource "aws_acm_certificate" "jellyfin_cert" {
-  domain_name       = trimsuffix(data.aws_route53_zone.jellyfin_domain.name,".")
+  count = var.HOSTED_ZONE_ID == "" ? 0 : 1
+  domain_name       = trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".")
   validation_method = "DNS"
 }
 
 resource "aws_route53_record" "jellyfin_cert_validation_record" {
-  name    = aws_acm_certificate.jellyfin_cert.domain_validation_options.0.resource_record_name
-  type    = aws_acm_certificate.jellyfin_cert.domain_validation_options.0.resource_record_type
-  zone_id = data.aws_route53_zone.jellyfin_domain.id
-  records = [aws_acm_certificate.jellyfin_cert.domain_validation_options.0.resource_record_value]
+  count = var.HOSTED_ZONE_ID == "" ? 0 : 1
+  name    = aws_acm_certificate.jellyfin_cert.0.domain_validation_options.0.resource_record_name
+  type    = aws_acm_certificate.jellyfin_cert.0.domain_validation_options.0.resource_record_type
+  zone_id = data.aws_route53_zone.jellyfin_domain.0.id
+  records = [aws_acm_certificate.jellyfin_cert.0.domain_validation_options.0.resource_record_value]
   ttl     = 60
 }
 
 resource "aws_acm_certificate_validation" "jellyfin_cert_validation" {
-  certificate_arn         = aws_acm_certificate.jellyfin_cert.arn
-  validation_record_fqdns = [aws_route53_record.jellyfin_cert_validation_record.fqdn]
+  count = var.HOSTED_ZONE_ID == "" ? 0 : 1
+  certificate_arn         = aws_acm_certificate.jellyfin_cert.0.arn
+  validation_record_fqdns = [aws_route53_record.jellyfin_cert_validation_record.0.fqdn]
 }
 
 resource "aws_lb" "jellyfin_alb" {
@@ -371,7 +371,7 @@ resource "aws_lb_listener" "jellyfin_https" {
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn = aws_acm_certificate_validation.jellyfin_cert_validation.certificate_arn
+  certificate_arn = aws_acm_certificate_validation.jellyfin_cert_validation.0.certificate_arn
 
   default_action {
     type             = "forward"
@@ -392,8 +392,8 @@ resource "aws_lb_target_group_attachment" "jellyfin_server_attachment" {
 
 resource "aws_route53_record" "jellyfin_domain_record" {
   count = var.HOSTED_ZONE_ID == "" ? 0 : 1
-  zone_id = data.aws_route53_zone.jellyfin_domain.zone_id
-  name    = trimsuffix(data.aws_route53_zone.jellyfin_domain.name,".")
+  zone_id = data.aws_route53_zone.jellyfin_domain.0.zone_id
+  name    = trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".")
   type    = "A"
   alias {
     name                   = aws_lb.jellyfin_alb.dns_name

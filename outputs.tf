@@ -1,5 +1,5 @@
 output "jellyfin_endpoint" {
-  value = var.HOSTED_ZONE_ID == "" ? aws_lb.jellyfin_alb.dns_name : trimsuffix(aws_route53_record.jellyfin_domain_record.fqdn,".")
+  value = var.HOSTED_ZONE_ID == "" ? aws_lb.jellyfin_alb.dns_name : trimsuffix(aws_route53_record.jellyfin_domain_record.0.fqdn,".")
 }
 
 output "jellyfin_server_ssh_endpoint" {
