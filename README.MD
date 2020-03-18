@@ -2,8 +2,11 @@
 
 This is a simple project designed to get you up and running with a Jellyfin server on AWS in a few simple clicks. This is also designed so that you can easily spin up, take down, and configure your jellyfin instance with as little coding as possible. Hopefully, after reading through all of this, and some of the code, you'll feel confident enough to customize this project to suit your own needs.
 
-## DISCLAIMER
-I provide absolutely no warranties for this code or documentation, and am not responsible for the security, cost, or any other aspect your infrastructure, code, or applications. I make absolutely no claims or warranties about your ability to legally copy or serve any video content. I also am not part of the Jellyfin project and cannot provide information, guidance, or warranties on their behalf. Please exercise your own judgement.
+**A NOTE ON COSTS**: AWS can be pretty expensive, so with heavy usage and high definition, high bitrate content, you could incur heavy charges. I **highly** recommend doing some calculations and setting [billing alerts](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/monitor_estimated_charges_with_cloudwatch.html) before getting started. There are a few major components to cost with running Jellyfin on AWS:
+* _S3 storage costs_: This is the cost to persistently store your media on S3.
+* _EC2 running costs_: This is the actual cost to run your Jellyfin server instance.
+* _EBS volume costs_: This is the cost of the hard drive space attached to your Jellyfin server instance. Movies are synced to this drive from S3 so Jellyfin can actually play the movies.
+* _EC2 data transfer costs_: This is the cost of actually streaming data from your server to the internet, _separate_ from your server running costs. This can be significant if you have a lot of users streaming a lot of very high bitrate content.
 
 ## Getting Started
 
@@ -149,7 +152,7 @@ Forgive me, some of these are basic, but I list them here for less technical use
 	* `HOSTED_ZONE_ID`: (OPTIONAL) If you would like your Jellyfin instance to be available on a custom, nice and pretty domain, you will need fill this in. See _(Optional) Configuring DNS_ under the _Deployment_ section below for the steps to set this up.
 	* `TERRAFORM_STATE_BUCKET`: This is an S3 bucket you will create that will store the configuration of your Terraform backend. Terraform is the tool that lets us write infrastructure as code and tell AWS what resources we need to create. Storing the infrastructure state in S3 ensures it doesn't get lost if something happens to your local machine.
 1. Create an S3 bucket through the AWS console and set the `TERRAFORM_STATE_BUCKET` environment variable to the name of the bucket. So if you call your S3 bucket `godzilla-jellyfin-backend`, that's exactly what you should put in the `.env` file. Make sure you create this bucket in the region you specified in the `AWS_REGION` environment variable. Make sure to call it something unique, like _godzill-terraform-state_.
-1. Create an ssh key by running `ssh-keygen -b 2048 -t rsa -f ./.ssh/jellyfin-key -q -P ""` on Unix, or `ssh-keygen -b 2048 -t rsa -f ./.ssh/jellyfin-key -q -P """"` on Windows. This will be used by our Terraform code to provision files on our EC2 instance.
+1. Create an ssh key by running `ssh-keygen -b 2048 -t rsa -f ./.ssh/jellyfin-key -q -P ""` on Mac or Linux, or `ssh-keygen -b 2048 -t rsa -f ./.ssh/jellyfin-key -q -P """"` on Windows. This will be used by our Terraform code to provision files on our EC2 instance.
 
 Now you're all set and ready to start deploying!
 
@@ -172,7 +175,7 @@ If you want your Jellyfin instance to be available at a particular domain name (
 1. Open a terminal and navigate to the project root directory.
 1. Run `docker-compose -f docker-compose.terraform.init.yml up --build`
 	* This will tell docker compose to run (`up`) the compose configuration in the init file (the file name after the `-f` flag), and to build (the `--build` flag) a fresh container to do so.
-	* If docker compose prompts you for input when you run this, open a second terminal and run `docker attach jellyfin_terraform_1`. You can then type into the second terminal and it will feed that input to the container running in the first terminal.
+	* If docker compose prompts you for input when you run this, open a second terminal and run `docker attach instant-jellyfin_terraform_1`. You can then type into the second terminal and it will feed that input to the container running in the first terminal.
 1. Run `docker-compose -f docker-compose.terraform.plan.yml up --build`
 	* Exactly as above, this will run the plan file which will prompt terraform to create a plan to deploy your infrastructure. You can and should inspect this plan in the console to make sure you don't have any errors and everything looks correct.
 1. If you're happy with the plan, run `docker-compose -f docker-compose.terraform.apply.yml up --build`
@@ -194,8 +197,7 @@ Once you've uploaded media into the folders as shown above, you should log in to
 ## Managing your instance
 If you need to manage your instance, such as restarting your docker container or manually messing around with files on your server, you should follow [AWS's instructions for connecting to your instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-connect-methods.html). I like use SSH in Ubuntu or Ubuntu through WSL (Windows Subsystem for Linux), but of course AWS provides a lovely browser-based SSH terminal as well. You must SSH into your instance using the EC2 instance domain generated by Amazon, not the domain your serve Jellyfin on your the load balancer domain.
 
-The Terraform setup creates scripts on the server under the `/jellyfin/scripts` folder to set up dependencies on the EC2 instance and start the necessary services. There are five scripts which Terraform creates,and they are all designed to be idempotent:
-1. `/jellyfin/scripts/setup.sh`: This script installs the prerequisites for running your Jellyfin instance. It does not hurt to run it again, it just won't do anything.
+The Terraform setup creates scripts on the server under the `/jellyfin/scripts` set up the necessary services. There are four scripts which Terraform creates,and they are all designed to be idempotent:
 1. `/jellyfin/scripts/s3sync.sh`: This script runs the S3 sync command, which ensures your local media folder exactly mirrors your S3 bucket. You can manually invoke this if you don't want to wait for the cron job. Be aware, if you delete something from S3 the sync command is set up to also delete it from the server.
 1. `/jellyfin/scripts/start-s3sync.sh`: This script adds a cron task to the Root user's crontab which will run `s3sync.sh` every five minutes. If you run it again, it will not add extra copies of the task, it will just re-create the task (check out the code in `jellyfin.tf` to see some wonderful code golf).
 1. `/jellyfin/scripts/start-jellyfin.sh`: This script checks whether the jellyfin docker container is running, kills and removes it if so, and then starts it again. Invoking it multiple times just restarts Jellyfin.
@@ -214,7 +216,7 @@ If you want to totally wipe out your infrastructure, you can do the following:
 1. Delete everything from your media S3 bucket. If you don't do this, Terraform will throw up and tell you that it can't delete a bucket which has things in it.
 1. Open a terminal and navigate to the project root directory.
 1. Run `docker-compose -f docker-compose.terraform.destroy.yml up --build`
-	* This will ask you to confirm destruction. Open a second terminal and run `docker attach jellyfin_terraform_1`. You can then type into the second terminal and it will feed that input to the container running in the first terminal.
+	* This will ask you to confirm destruction. Open a second terminal and run `docker attach instant-jellyfin_terraform_1`. You can then type into the second terminal and it will feed that input to the container running in the first terminal.
 	* This will really destroy everything, so be sure you want to proceed.
 
 ## Built With
@@ -226,13 +228,14 @@ If you want to totally wipe out your infrastructure, you can do the following:
 
 ## Technical notes for those who care
 
-* This Terraform setup is not the most secure it could be, in that it leaves some ports open and doesn't use a VPC. This is for the sake of simplicity and cost since I don't believe most of you are controlling NORAD from your Jellyfin server (I hope).
+* This Terraform setup is not the most secure it could be, in that it leaves SSH open and uses the default VPC. This is for the sake of simplicity and cost since I don't believe most of you are controlling NORAD from your Jellyfin server (I hope).
 * This setup leaves your server's SSH port open so it's easier to configure. If you are not happy with that, it's easy to change in the Terraform.
 * This setup just uses `crontab` to run `aws s3 sync` every few minutes to update your media library from S3. Again, feel free to customize, and if you come up with a way more awesome solution please create a PR!
 * This project uses docker-compose to run Terraform commands inside a Terraform container to avoid having to deal with configuration issues on your local machine. Each docker-compose `.yml` file has a separate command and environment variable mapping. I like this setup because it's easy to use, easy to version, and easy to modify. If you don't like this, I'm always open to suggestions.
 * For simplicity, the paths in the setup and start scripts are absolute paths and cannot be configured. If you need to run jellyfin and the associated services from different folders, feel free to configure the terraform code as you like, or upgrade it to support configurable folder paths.
 * This project doesn't support having a separate EBS volume to stage media. It would be a nice-to-have, but too time consuming right now.
 * It would be awesome and cost-saving to be able to directly use S3 as a media source, but as far as I'm aware this isn't possible with Jellyfin yet. If you have suggestions or ideas around this, or have gotten this working yourself, please let me know!
+* You'll notice that I run `dos2unix` on the scripts that Terraform creates. This is because I've been developing this on both Windows and Linux, and discovered that on Windows, Terraform created files with Windows line endings, causing the scripts to fail in really weird ways. The better solution is probably to not use provisioners like this, but it works well for a small project like this.
 
 ## Contributing
 
