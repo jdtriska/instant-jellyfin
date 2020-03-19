@@ -21,7 +21,7 @@ Forgive me, some of these are basic, but I list them here for less technical use
 1. You'll need your AWS access keys. See https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html for details on getting those from the AWS console.
 1. You'll need to know how to clone this project from Github. See https://help.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository for details.
 1. You'll need to know how to use a command line terminal. There are many tutorials out there for doing this, so I'll leave finding one for your system as an exercise for the reader.
-1. I would highly recommend you sort out your encoding pipeline ahead of time to make sure you have videos in the appropriate format and bitrate for streaming via Jellyfin. I use Handbrake and the Nvidia NVEnc H.264 codec for converting Blu-ray files from MakeMKV. I've included the handbrake preset file below for your convenience. Simply save as a `.json` file and import to Handbrake. Make sure to check your subtitle settings, since Handbrake doesn't seem to get them correct even with a preset.
+1. I would recommend you sort out your encoding pipeline ahead of time to make sure you have videos in the appropriate format and bitrate for streaming via Jellyfin. I use Handbrake and the Nvidia NVEnc H.264 codec at 4000kbps for converting Blu-ray files from MakeMKV. I've included the handbrake preset file below for your convenience. Simply save as a `.json` file and import to Handbrake. Make sure to check your subtitle settings, since Handbrake doesn't seem to get them correct even with a preset.
 
 ```
 {
@@ -114,7 +114,7 @@ Forgive me, some of these are basic, but I list them here for less technical use
         "any"
       ],
       "SubtitleTrackSelectionBehavior": "all",
-      "VideoAvgBitrate": 5000,
+      "VideoAvgBitrate": 4000,
       "VideoColorMatrixCode": 0,
       "VideoEncoder": "nvenc_h264",
       "VideoFramerateMode": "cfr",
