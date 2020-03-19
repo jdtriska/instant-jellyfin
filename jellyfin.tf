@@ -241,7 +241,7 @@ EOF
   provisioner "file" {
     content = <<EOF
 #!/bin/bash
-echo -e "$(crontab -u root -l 2>/dev/null | grep -v jellyfin-s3-sync)\n*/5 * * * * /bin/bash ~/jellyfin/scripts/s3sync.sh #jellyfin-s3-sync" | crontab -u root -
+echo -e "$(crontab -l 2>/dev/null | grep -v jellyfin-s3-sync)\n*/5 * * * * /bin/bash ~/jellyfin/scripts/s3sync.sh #jellyfin-s3-sync" | crontab -
 EOF
     destination = "/tmp/start-s3sync.sh"
   }
@@ -275,7 +275,7 @@ EOF
   provisioner "file" {
     content = <<EOF
 #!/bin/bash
-service nginx restart
+sudo service nginx restart
 EOF
     destination = "/tmp/start-nginx.sh"
   }
@@ -283,18 +283,18 @@ EOF
   provisioner "remote-exec" {
     inline = [
       "sudo mv /tmp/instant-jellyfin.conf /etc/nginx/conf.d/instant-jellyfin.conf",
-      "sudo mv /tmp/start-s3sync.sh ~/jellyfin/scripts/start-s3sync.sh",
-      "sudo mv /tmp/s3sync.sh ~/jellyfin/scripts/s3sync.sh",
-      "sudo mv /tmp/start-jellyfin.sh ~/jellyfin/scripts/start-jellyfin.sh",
-      "sudo mv /tmp/start-nginx.sh ~/jellyfin/scripts/start-nginx.sh",
+      "mv /tmp/start-s3sync.sh ~/jellyfin/scripts/start-s3sync.sh",
+      "mv /tmp/s3sync.sh ~/jellyfin/scripts/s3sync.sh",
+      "mv /tmp/start-jellyfin.sh ~/jellyfin/scripts/start-jellyfin.sh",
+      "mv /tmp/start-nginx.sh ~/jellyfin/scripts/start-nginx.sh",
       "sudo dos2unix /etc/nginx/conf.d/instant-jellyfin.conf",
-      "sudo dos2unix ~/jellyfin/scripts/start-s3sync.sh",
-      "sudo dos2unix ~/jellyfin/scripts/s3sync.sh",
-      "sudo dos2unix ~/jellyfin/scripts/start-jellyfin.sh",
-      "sudo dos2unix ~/jellyfin/scripts/start-nginx.sh",
-      "sudo /bin/bash ~/jellyfin/scripts/start-s3sync.sh",
+      "dos2unix ~/jellyfin/scripts/start-s3sync.sh",
+      "dos2unix ~/jellyfin/scripts/s3sync.sh",
+      "dos2unix ~/jellyfin/scripts/start-jellyfin.sh",
+      "dos2unix ~/jellyfin/scripts/start-nginx.sh",
+      "/bin/bash ~/jellyfin/scripts/start-s3sync.sh",
       "/bin/bash ~/jellyfin/scripts/start-jellyfin.sh",
-      "sudo /bin/bash ~/jellyfin/scripts/start-nginx.sh"
+      "/bin/bash ~/jellyfin/scripts/start-nginx.sh"
     ]
   }
 
