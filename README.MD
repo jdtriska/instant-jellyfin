@@ -151,8 +151,8 @@ Forgive me, some of these are basic, but I list them here for less technical use
 	* `ENVIRONMENT`: This is an arbitrary name for your environment, to avoid conflicts if you decide to deploy multiple Jellyfin instances. I suggest a cool name, like _godzilla_.
 	* `HOSTED_ZONE_ID`: (OPTIONAL) If you would like your Jellyfin instance to be available on a custom, nice and pretty domain, you will need fill this in. See _(Optional) Configuring DNS_ under the _Deployment_ section below for the steps to set this up.
 	* `TERRAFORM_STATE_BUCKET`: This is an S3 bucket you will create that will store the configuration of your Terraform backend. Terraform is the tool that lets us write infrastructure as code and tell AWS what resources we need to create. Storing the infrastructure state in S3 ensures it doesn't get lost if something happens to your local machine.
-1. Create an S3 bucket through the AWS console and set the `TERRAFORM_STATE_BUCKET` environment variable to the name of the bucket. So if you call your S3 bucket `godzilla-jellyfin-backend`, that's exactly what you should put in the `.env` file. Make sure you create this bucket in the region you specified in the `AWS_REGION` environment variable. Make sure to call it something unique, like _godzill-terraform-state_.
-1. Create an ssh key by running `ssh-keygen -b 2048 -t rsa -f ./.ssh/jellyfin-key -q -P ""` on Mac or Linux, or `ssh-keygen -b 2048 -t rsa -f ./.ssh/jellyfin-key -q -P """"` on Windows. This will be used by our Terraform code to provision files on our EC2 instance.
+1. Create an S3 bucket through the AWS console and set the `TERRAFORM_STATE_BUCKET` environment variable to the name of the bucket. Make sure you create this bucket in the region you specified in the `AWS_REGION` environment variable. Be sure to call it something unique, like _godzill-terraform-state_.
+1. Create an ssh key by running `ssh-keygen -b 2048 -t rsa -f ./.ssh/jellyfin-key -q -P """"`. This will be used by our Terraform code to provision files on our EC2 instance.
 
 Now you're all set and ready to start deploying!
 
