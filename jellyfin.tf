@@ -11,6 +11,10 @@ terraform {
   }
 }
 
+locals {
+  server_name = var.HOSTED_ZONE_ID == "" ? aws_lb.jellyfin_alb.dns_name : trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".")
+  EBS_Device = "/dev/xvdb"
+}
 /**
  * This is our provider setup.
  * Feel free to try out other cloud providers using this as a template.
@@ -100,7 +104,7 @@ resource "aws_iam_role_policy" "jellyfin_server_policy" {
 }
 
 resource "aws_iam_instance_profile" "jellyfin_instance_profile" {
-  name = "${var.ENVIRONMENT}-jellyfin-instance-profile"
+  name = "${var.ENVIRONMENT}-jellyfin-instance-profile_2"
   role = aws_iam_role.jellyfin_server_role.name
 }
 
@@ -171,6 +175,7 @@ resource "aws_key_pair" "jellyfin_keys" {
 }
 
 resource "aws_eip" "jellyfin_eip" {
+  instance = aws_instance.jellyfin_server.id
   tags = {
     Name        = "${var.ENVIRONMENT}-jellyfin_eip"
     Environment = var.ENVIRONMENT
@@ -183,10 +188,12 @@ resource "aws_instance" "jellyfin_server" {
   ami = data.aws_ami.amazon_linux_2.id
   instance_type = var.EC2_INSTANCE_TYPE
   iam_instance_profile = aws_iam_instance_profile.jellyfin_instance_profile.name
+  associate_public_ip_address = true
   root_block_device {
     volume_size = var.EBS_ROOT_VOLUME_SIZE
   }
   ebs_block_device {
+    device_name = local.EBS_Device 
     volume_size = var.EBS_MEDIA_VOLUME_SIZE
     volume_type = "st1"
   }
@@ -201,43 +208,74 @@ resource "aws_instance" "jellyfin_server" {
   }
 
   provisioner "remote-exec" {
-    script = file("files/setup.sh")
+    inline = [
+      "mkdir ~/jellyfin",
+      "mkdir ~/jellyfin/scripts",
+      "mkdir ~/jellyfin/media",
+      "mkdir ~/jellyfin/cache",
+      "mkdir ~/jellyfin/config",
+      "sudo amazon-linux-extras enable nginx1",
+      "sudo yum install -y docker nginx dos2unix",
+      "sudo usermod -a -G docker ec2-user",
+      "sudo systemctl enable docker",
+      "sudo systemctl enable nginx"
+    ]
   }
 
+  // Creates nginx conf file for jellyfin server based on ALB or Domain name
   provisioner "file" {
-    content = templatefile("templates/server.conf.tmpl", {server_name = ${var.HOSTED_ZONE_ID == "" ? "~^${aws_lb.jellyfin_alb.name}.*\\.elb\\.amazonaws.com$" : trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".")} })
+    content = templatefile("templates/server.conf.tmpl", { server_name = local.server_name })
     destination = "/tmp/instant-jellyfin.conf"
   }
 
+  // Lays down cron for syncing files form s3 bucket to local storage
   provisioner "file" {
     content = file("files/start-sync.sh") 
     destination = "/tmp/start-s3sync.sh"
   }
 
+  // Creates cron job script with bucket variable
   provisioner "file" {
     content = templatefile("templates/s3sync.sh.tmpl", { BUCKET = aws_s3_bucket.jellyfin_media.id })
     destination = "/tmp/s3sync.sh"
   }
 
+  // Formats media EBS Volume and mounts to ~/jellyfin/media
   provisioner "remote-exec" {
     inline = [
-      var.EBS_MEDIA_VOLUME_SIZE == "" ? "" : "sudo mkfs -t xfs /dev/nvme1n1 && sudo mount /dev/nvme1n1 ~/jellyfin/media"
+      var.EBS_MEDIA_VOLUME_SIZE == "" ? "" : "sudo mkfs -t xfs /dev/nvme1n1 && sudo mount ${local.EBS_Device} ~/jellyfin/media"
     ]
   }
 
+  // Lays down docker script
   provisioner "file" {
     content = file("files/start-jellyfin.sh")
     destination = "/tmp/start-jellyfin.sh"
   }
 
+  // Starts Nginx with jellyfin conf
   provisioner "file" {
     content = file("files/start-nginx.sh")
     destination = "/tmp/start-nginx.sh"
   }
 
-  provisioner "remote-exec" {
-    script = file("files/init.sh")
-  }
+   provisioner "remote-exec" {
+    inline = [
+      "sudo mv /tmp/instant-jellyfin.conf /etc/nginx/conf.d/instant-jellyfin.conf",
+      "mv /tmp/start-s3sync.sh ~/jellyfin/scripts/start-s3sync.sh",
+      "mv /tmp/s3sync.sh ~/jellyfin/scripts/s3sync.sh",
+      "mv /tmp/start-jellyfin.sh ~/jellyfin/scripts/start-jellyfin.sh",
+      "mv /tmp/start-nginx.sh ~/jellyfin/scripts/start-nginx.sh",
+      "sudo dos2unix /etc/nginx/conf.d/instant-jellyfin.conf",
+      "dos2unix ~/jellyfin/scripts/start-s3sync.sh",
+      "dos2unix ~/jellyfin/scripts/s3sync.sh",
+      "dos2unix ~/jellyfin/scripts/start-jellyfin.sh",
+      "dos2unix ~/jellyfin/scripts/start-nginx.sh",
+      "/bin/bash ~/jellyfin/scripts/start-s3sync.sh",
+      "/bin/bash ~/jellyfin/scripts/start-jellyfin.sh",
+      "/bin/bash ~/jellyfin/scripts/start-nginx.sh"
+    ]
+  } 
 
   tags = {
     Name        = "${var.ENVIRONMENT}-jellyfin-server"
@@ -260,14 +298,26 @@ resource "aws_vpc" "jellyfin_vpc" {
   cidr_block = "10.0.0.0/16"
 }
 
+resource "aws_internet_gateway" "jellyfin_gw" {
+  vpc_id = aws_vpc.jellyfin_vpc.id
+}
+
+resource "aws_default_route_table" "jellyfin_route" {
+  default_route_table_id = aws_vpc.jellyfin_vpc.default_route_table_id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.jellyfin_gw.id
+  }
+}
+
 resource "aws_subnet" "jellyfin_a" {
-  vpc_id     = "${aws_vpc.jellyfin_vpc.id}"
+  vpc_id     = aws_vpc.jellyfin_vpc.id
   cidr_block = "10.0.1.0/24"
   availability_zone = "${var.AWS_REGION}a"
 }
 
 resource "aws_subnet" "jellyfin_b" {
-  vpc_id     = "${aws_vpc.jellyfin_vpc.id}"
+  vpc_id     = aws_vpc.jellyfin_vpc.id
   cidr_block = "10.0.2.0/24"
   availability_zone = "${var.AWS_REGION}b"
 }
@@ -341,7 +391,7 @@ resource "aws_lb_target_group" "jellyfin_tg" {
   name     = "${var.ENVIRONMENT}-jellyfin-tg"
   port     = 80
   protocol = "HTTP"
-  vpc_id = aws_default_vpc.jellyfin.id
+  vpc_id = aws_vpc.jellyfin_vpc.id
 
   health_check {
     enabled = true
