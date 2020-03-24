@@ -10,7 +10,11 @@ variable "AWS_SECRET_ACCESS_KEY" {
   type = string
 }
 
-variable "EBS_VOLUME_SIZE" {
+variable "EBS_ROOT_VOLUME_SIZE" {
+  type = string
+}
+
+variable "EBS_MEDIA_VOLUME_SIZE" {
   type = string
 }
 

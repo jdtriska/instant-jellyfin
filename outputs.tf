@@ -3,5 +3,5 @@ output "jellyfin_endpoint" {
 }
 
 output "jellyfin_server_ssh_command" {
-  value = "ssh -i \"./.ssh/jellyfin-key\" ec2-user@${aws_instance.jellyfin_server.public_dns}"
+  value = "ssh -i \"./.ssh/jellyfin-key\" ec2-user@${aws_eip.jellyfin_eip.public_ip}"
 }
