@@ -195,7 +195,7 @@ resource "aws_instance" "jellyfin_server" {
   ebs_block_device {
     device_name = local.EBS_Device 
     volume_size = var.EBS_MEDIA_VOLUME_SIZE
-    volume_type = "st1"
+    volume_type = var.EBS_MEDIA_VOLUME_TYPE
     tags = {
       Name = "${var.ENVIRONMENT}-jellyfin_media_volume"
       Environment = var.ENVIRONMENT
@@ -250,7 +250,7 @@ resource "aws_instance" "jellyfin_server" {
       "sudo mkfs -t xfs ${local.EBS_Device}",
       "UUID=$(ls -l /dev/disk/by-uuid/ | grep ${local.EBS_Device} | awk '{ print $9}')",
       "sudo mv /etc/fstab /etc/fstab.bak",
-      "sudo echo \"UUID=${UUID} /home/ec2-user/jellyfin/media  xfs  defaults,nofail  0  2\" /etc/fstab",
+      "sudo echo \"UUID=${UUID} /home/ec2-user/jellyfin/media  xfs  defaults,nofail  0  2\" >> /etc/fstab",
       "sudo mount -a",
       "sudo chown -R ec2-user.ec2.user /home/ec2-user/jellyfin/media"
     ]
