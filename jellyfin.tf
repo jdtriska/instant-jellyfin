@@ -12,7 +12,7 @@ terraform {
 }
 
 locals {
-  server_name = var.HOSTED_ZONE_ID == "" ? aws_lb.jellyfin_alb.dns_name : trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".")
+  server_name = ${var.HOSTED_ZONE_ID == "" ? "~^${aws_lb.jellyfin_alb.name}.*\\.elb\\.amazonaws.com$" : trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".") } 
   EBS_Device = "/dev/xvdb"
 }
 /**
@@ -196,6 +196,10 @@ resource "aws_instance" "jellyfin_server" {
     device_name = local.EBS_Device 
     volume_size = var.EBS_MEDIA_VOLUME_SIZE
     volume_type = "st1"
+    tags = {
+      Name = "${var.ENVIRONMENT}-jellyfin_media_volume"
+      Environment = var.ENVIRONMENT
+    }
   }
 
   security_groups = [aws_security_group.jellyfin_server_sg.id]
@@ -243,7 +247,12 @@ resource "aws_instance" "jellyfin_server" {
   // Formats media EBS Volume and mounts to ~/jellyfin/media
   provisioner "remote-exec" {
     inline = [
-      var.EBS_MEDIA_VOLUME_SIZE == "" ? "" : "sudo mkfs -t xfs /dev/nvme1n1 && sudo mount ${local.EBS_Device} ~/jellyfin/media"
+      "sudo mkfs -t xfs ${local.EBS_Device}",
+      "UUID=$(ls -l /dev/disk/by-uuid/ | grep ${local.EBS_Device} | awk '{ print $9}')",
+      "sudo mv /etc/fstab /etc/fstab.bak",
+      "sudo echo \"UUID=${UUID} /home/ec2-user/jellyfin/media  xfs  defaults,nofail  0  2\" /etc/fstab",
+      "sudo mount -a",
+      "sudo chown -R ec2-user.ec2.user /home/ec2-user/jellyfin/media"
     ]
   }
 
@@ -296,10 +305,18 @@ resource "aws_vpc" "jellyfin_vpc" {
   enable_dns_support   = true
   instance_tenancy     = "default"
   cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "${var.ENVIRONMENT}-jellyfin_vpc"
+    Environment = var.Environment
+}
 }
 
-resource "aws_internet_gateway" "jellyfin_gw" {
+resource "aws_internet_gateway" "jellyfin_igw" {
   vpc_id = aws_vpc.jellyfin_vpc.id
+  tags = {
+    Name = "${var.ENVIRONMENT}-jellyfin_igw"
+    Environment = var.Environment
+}
 }
 
 resource "aws_default_route_table" "jellyfin_route" {
@@ -308,18 +325,30 @@ resource "aws_default_route_table" "jellyfin_route" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.jellyfin_gw.id
   }
+  tags = {
+    Name = "${var.ENVIRONMENT}-jellyfin_route"
+    Environment = var.Environment
+}
 }
 
 resource "aws_subnet" "jellyfin_a" {
   vpc_id     = aws_vpc.jellyfin_vpc.id
   cidr_block = "10.0.1.0/24"
   availability_zone = "${var.AWS_REGION}a"
+  tags = {
+    Name = "${var.ENVIRONMENT}-jellyfin_a"
+    Environment = var.Environment
+}
 }
 
 resource "aws_subnet" "jellyfin_b" {
   vpc_id     = aws_vpc.jellyfin_vpc.id
   cidr_block = "10.0.2.0/24"
   availability_zone = "${var.AWS_REGION}b"
+  tags = {
+    Name = "${var.ENVIRONMENT}-jellyfin_b"
+    Environment = var.Environment
+  }
 }
 
 resource "aws_security_group" "jellyfin_alb_sg" {
