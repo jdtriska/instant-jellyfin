@@ -50,6 +50,14 @@ resource "aws_s3_bucket" "jellyfin_media" {
   }
 }
 
+resource "aws_s3_bucket" "jellyfin_backup" {
+  bucket = "${var.ENVIRONMENT}-jellyfin-backup"
+  tags = {
+    Name        = "${var.ENVIRONMENT}-jellyfin-backup"
+    Environment = var.ENVIRONMENT
+  }
+}
+
 /**
  * This sets up the permissions our EC2 instance will need to sync
  *   with S3.
@@ -87,6 +95,7 @@ resource "aws_iam_role_policy" "jellyfin_server_policy" {
     "Version": "2012-10-17",
     "Statement": [
       {
+        "Sid": "Media",
         "Action": [
           "s3:GetObject",
           "s3:ListBucket"
@@ -95,6 +104,19 @@ resource "aws_iam_role_policy" "jellyfin_server_policy" {
         "Resource": [
           "${aws_s3_bucket.jellyfin_media.arn}",
           "${aws_s3_bucket.jellyfin_media.arn}/*"
+        ]
+      },
+      {
+        "Sid": "Backups",
+        "Action": [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:PutObject"
+        ],
+        "Effect": "Allow",
+        "Resource": [
+          "${aws_s3_bucket.jellyfin_backup.arn}",
+          "${aws_s3_bucket.jellyfin_backup.arn}/*"
         ]
       }
     ]
@@ -197,7 +219,7 @@ resource "aws_instance" "jellyfin_server" {
     volume_type = var.EBS_MEDIA_VOLUME_TYPE
   }
 
-  security_groups = [aws_security_group.jellyfin_server_sg.id]
+  vpc_security_group_ids = [aws_security_group.jellyfin_server_sg.id]
   subnet_id = aws_subnet.jellyfin_a.id
   connection {
     type     = "ssh"
@@ -262,6 +284,26 @@ resource "aws_instance" "jellyfin_server" {
     destination = "/tmp/start-nginx.sh"
   }
 
+  // Starts jellyfin backups to S3
+  provisioner "file" {
+    content = file("files/start-backup.sh")
+    destination = "/tmp/start-backup.sh"
+  }
+
+
+  // Creates backup script for jellyfin config
+  provisioner "file" {
+    content = templatefile("templates/backup.sh.tmpl", { BUCKET = aws_s3_bucket.jellyfin_backup.id })
+    destination = "/tmp/backup.sh"
+  }
+
+  // Creates restore script for jellyfin config
+  provisioner "file" {
+    content = templatefile("templates/restore.sh.tmpl", { BUCKET = aws_s3_bucket.jellyfin_backup.id })
+    destination = "/tmp/restore.sh"
+  }
+
+
    provisioner "remote-exec" {
     inline = [
       "sudo mv /tmp/instant-jellyfin.conf /etc/nginx/conf.d/instant-jellyfin.conf",
@@ -269,15 +311,22 @@ resource "aws_instance" "jellyfin_server" {
       "mv /tmp/s3sync.sh ~/jellyfin/scripts/s3sync.sh",
       "mv /tmp/start-jellyfin.sh ~/jellyfin/scripts/start-jellyfin.sh",
       "mv /tmp/start-nginx.sh ~/jellyfin/scripts/start-nginx.sh",
+      "mv /tmp/start-backup.sh ~/jellyfin/scripts/start-backup.sh",
+      "mv /tmp/backup.sh ~/jellyfin/scripts/backup.sh",
+      "mv /tmp/restore.sh ~/jellyfin/scripts/restore.sh",
       "sudo dos2unix /etc/nginx/conf.d/instant-jellyfin.conf",
       "sudo sed -i '/^[ ]*http[ ]*{.*/a     server_names_hash_bucket_size  128;' /etc/nginx/nginx.conf",
       "dos2unix ~/jellyfin/scripts/start-s3sync.sh",
       "dos2unix ~/jellyfin/scripts/s3sync.sh",
       "dos2unix ~/jellyfin/scripts/start-jellyfin.sh",
       "dos2unix ~/jellyfin/scripts/start-nginx.sh",
+      "dos2unix ~/jellyfin/scripts/start-backup.sh",
+      "dos2unix ~/jellyfin/scripts/backup.sh",
+      "dos2unix ~/jellyfin/scripts/restore.sh",
       "/bin/bash ~/jellyfin/scripts/start-s3sync.sh",
       "/bin/bash ~/jellyfin/scripts/start-jellyfin.sh",
-      "/bin/bash ~/jellyfin/scripts/start-nginx.sh"
+      "/bin/bash ~/jellyfin/scripts/start-nginx.sh",
+      "/bin/bash ~/jellyfin/scripts/start-backup.sh"
     ]
   } 
 

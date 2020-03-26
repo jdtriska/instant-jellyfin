@@ -1,0 +1,12 @@
+#!/bin/bash
+aws s3 sync "s3://${BUCKET}/$1" /tmp/jfconfig --delete
+echo "The config backup you specified was taken on: "
+cat /tmp/jfconfig/backup.log
+read -p "Are you sure you want to restore this Jellyfin config? (y/n)" -n 1 -r
+echo    # (optional) move to a new line
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+	mv ~/jellyfin/config /tmp/jfconfigbak
+	mv /tmp/jfconfig/ ~/jellyfin/config
+	/bin/bash ~/jellyfin/scripts/start-jellyfin.sh
+fi

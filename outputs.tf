@@ -9,4 +9,7 @@ output "jellyfin_server_ssh_command" {
 output "jellyfin_media_bucket" {
   value = aws_s3_bucket.jellyfin_media.arn
 }
+
+output "jellyfin_backup_bucket" {
+  value = aws_s3_bucket.jellyfin_backup.arn
 }
