@@ -10,8 +10,18 @@ variable "AWS_SECRET_ACCESS_KEY" {
   type = string
 }
 
-variable "EBS_VOLUME_SIZE" {
+variable "EBS_ROOT_VOLUME_SIZE" {
   type = string
+  default = 8
+}
+
+variable "EBS_MEDIA_VOLUME_SIZE" {
+  type = string
+}
+
+variable "EBS_MEDIA_VOLUME_TYPE" {
+  type = string
+  default = "st1"
 }
 
 variable "EC2_INSTANCE_TYPE" {
