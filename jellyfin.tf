@@ -13,7 +13,6 @@ terraform {
 
 locals {
   server_name = var.HOSTED_ZONE_ID == "" ? "~^${aws_lb.jellyfin_alb.name}.*\\.elb\\.amazonaws.com$" : trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".") 
-  EBS_Device = "/dev/xvdb"
 }
 /**
  * This is our provider setup.
@@ -200,7 +199,6 @@ resource "aws_instance" "jellyfin_server" {
 
   security_groups = [aws_security_group.jellyfin_server_sg.id]
   subnet_id = aws_subnet.jellyfin_a.id
-  user_data = templatefile("templates/mount.sh.tmpl", { DISK = local.EBS_Device })
   connection {
     type     = "ssh"
     user     = "ec2-user"
@@ -220,6 +218,17 @@ resource "aws_instance" "jellyfin_server" {
       "sudo usermod -a -G docker ec2-user",
       "sudo systemctl enable docker",
       "sudo systemctl enable nginx"
+    ]
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "EBS_DEVICE_NAME=$(lsblk | grep ${var.EBS_MEDIA_VOLUME_SIZE}G | awk '{print $1}')",
+      "sudo mkfs -t xfs /dev/$${EBS_DEVICE_NAME}",
+      "EBS_DEVICE_UUID=$(sudo blkid | grep $${EBS_DEVICE_NAME} | awk -F'\"' '{print $2}')",
+      "sudo echo -e \"UUID=$${EBS_DEVICE_UUID} /home/ec2-user/jellyfin/media  xfs  defaults,nofail  0  2\" | sudo tee -a /etc/fstab",
+      "sudo mount -a",
+      "sudo chown -R ec2-user /home/ec2-user/jellyfin/media"
     ]
   }
 

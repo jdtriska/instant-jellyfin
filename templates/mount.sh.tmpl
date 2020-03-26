@@ -1,6 +1,0 @@
-#!/bin/bash
-sudo mkfs -t xfs ${DISK}
-mkdir /Media
-sudo mount ${DISK} /Media
-UUID=$(ls -l /dev/disk/by-uuid/ | grep ${DISK} | awk '{ print $9}')
-echo UUID=$${UUID} /Media xfs defaults,nofail 0 2 >> /etc/fstab
