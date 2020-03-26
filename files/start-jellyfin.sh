@@ -4,7 +4,7 @@ docker ps -aq --filter "name=jellyfin" | grep -q . && docker stop jellyfin && do
 docker run -d \
  --volume ~/jellyfin/config:/config \
  --volume ~/jellyfin/cache:/cache \
- --volume ~/jellyfin/media:/media \
+ --volume /Media:/media \
  --user 1000:1000 \
  --net=host \
  --restart=unless-stopped \
