@@ -12,7 +12,7 @@ terraform {
 }
 
 locals {
-  server_name = var.HOSTED_ZONE_ID == "" ? "~^${aws_lb.jellyfin_alb.name}.*\\.elb\\.amazonaws.com$" : trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".") 
+  server_name = var.HOSTED_ZONE_ID == "" ? aws_lb.jellyfin_alb.dns_name : trimsuffix(data.aws_route53_zone.jellyfin_domain.0.name,".")
 }
 /**
  * This is our provider setup.
@@ -192,7 +192,7 @@ resource "aws_instance" "jellyfin_server" {
     volume_size = var.EBS_ROOT_VOLUME_SIZE
   }
   ebs_block_device {
-    device_name = local.EBS_Device 
+    device_name = "/dev/sdf"
     volume_size = var.EBS_MEDIA_VOLUME_SIZE
     volume_type = var.EBS_MEDIA_VOLUME_TYPE
   }
@@ -270,6 +270,7 @@ resource "aws_instance" "jellyfin_server" {
       "mv /tmp/start-jellyfin.sh ~/jellyfin/scripts/start-jellyfin.sh",
       "mv /tmp/start-nginx.sh ~/jellyfin/scripts/start-nginx.sh",
       "sudo dos2unix /etc/nginx/conf.d/instant-jellyfin.conf",
+      "sudo sed -i '/^[ ]*http[ ]*{.*/a     server_names_hash_bucket_size  128;' /etc/nginx/nginx.conf",
       "dos2unix ~/jellyfin/scripts/start-s3sync.sh",
       "dos2unix ~/jellyfin/scripts/s3sync.sh",
       "dos2unix ~/jellyfin/scripts/start-jellyfin.sh",
