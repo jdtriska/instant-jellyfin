@@ -233,13 +233,11 @@ If you want to totally wipe out your infrastructure, you can do the following:
 
 ## Technical notes for those who care
 
-* This Terraform setup is not the most secure it could be, in that it leaves SSH open and uses the default VPC. This is for the sake of simplicity and cost since I don't believe most of you are controlling NORAD from your Jellyfin server (I hope).
-* This setup leaves your server's SSH port open so it's easier to configure. If you are not happy with that, it's easy to change in the Terraform.
+* This Terraform setup is not the most secure it could be, in that it leaves SSH open to the public internet. This is for the sake of simplicity since I don't believe most of you are controlling NORAD from your Jellyfin server (I hope).
 * This setup just uses `crontab` to run `aws s3 sync` every few minutes to update your media library from S3. Again, feel free to customize, and if you come up with a way more awesome solution please create a PR!
+* This setup also uses `aws s3 sync` to back up your Jellyfin config every hour. This is a good stopgap for when you have to re-create your infrastructure, but if you come up with a better solution for backups, again, please create a PR!
 * This project uses docker-compose to run Terraform commands inside a Terraform container to avoid having to deal with configuration issues on your local machine. Each docker-compose `.yml` file has a separate command and environment variable mapping. I like this setup because it's easy to use, easy to version, and easy to modify. If you don't like this, I'm always open to suggestions.
 * For simplicity, the paths in the setup and start scripts are absolute paths and cannot be configured. If you need to run jellyfin and the associated services from different folders, feel free to configure the terraform code as you like, or upgrade it to support configurable folder paths.
-* This project doesn't support having a separate EBS volume to stage media. It would be a nice-to-have, but too time consuming right now.
-* It would be awesome and cost-saving to be able to directly use S3 as a media source, but as far as I'm aware this isn't possible with Jellyfin yet. If you have suggestions or ideas around this, or have gotten this working yourself, please let me know!
 * You'll notice that I run `dos2unix` on the scripts that Terraform creates. This is because I've been developing this on both Windows and Linux, and discovered that on Windows, Terraform created files with Windows line endings, causing the scripts to fail in really weird ways. The better solution is probably to not use provisioners like this, but it works well for a small project like this.
 
 ## Contributing
