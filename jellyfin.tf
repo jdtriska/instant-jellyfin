@@ -52,6 +52,13 @@ resource "aws_s3_bucket" "jellyfin_media" {
 
 resource "aws_s3_bucket" "jellyfin_backup" {
   bucket = "${var.ENVIRONMENT}-jellyfin-backup"
+  lifecycle_rule {
+    id      = "backups"
+    enabled = true
+    expiration {
+      days = 30
+    }
+  }
   tags = {
     Name        = "${var.ENVIRONMENT}-jellyfin-backup"
     Environment = var.ENVIRONMENT
