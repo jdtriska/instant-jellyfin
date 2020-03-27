@@ -5,3 +5,11 @@ output "jellyfin_endpoint" {
 output "jellyfin_server_ssh_command" {
   value = "ssh -i \"./.ssh/jellyfin-key\" ec2-user@${aws_eip.jellyfin_eip.public_ip}"
 }
+
+output "jellyfin_media_bucket" {
+  value = aws_s3_bucket.jellyfin_media.arn
+}
+
+output "jellyfin_backup_bucket" {
+  value = aws_s3_bucket.jellyfin_backup.arn
+}
