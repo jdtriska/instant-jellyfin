@@ -1,4 +1,7 @@
 #!/bin/bash
+# exit when any command fails
+set -e
+
 BACKUP_DATE=$(date)
 echo $${BACKUP_DATE} > ~/jellyfin/config/backup.log
 aws s3 sync ~/jellyfin/config "s3://${BUCKET}/$${BACKUP_DATE}" --delete

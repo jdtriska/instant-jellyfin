@@ -1,4 +1,7 @@
 #!/bin/bash
+# exit when any command fails
+set -e
+
 aws s3 sync "s3://${BUCKET}/$1" /tmp/jfconfig --delete
 echo "The config backup you specified was taken on: "
 cat /tmp/jfconfig/backup.log
