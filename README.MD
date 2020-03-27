@@ -21,13 +21,13 @@ Forgive me, some of these are basic, but I list them here for less technical use
 1. You'll need your AWS access keys. See https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html for details on getting those from the AWS console.
 1. You'll need to know how to clone this project from Github. See https://help.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository for details.
 1. You'll need to know how to use a command line terminal. There are many tutorials out there for doing this, so I'll leave finding one for your system as an exercise for the reader.
-1. I would recommend you sort out your encoding pipeline ahead of time to make sure you have videos in the appropriate format and bitrate for streaming via Jellyfin. I use Handbrake and the Nvidia NVEnc H.264 codec at 4000kbps for converting Blu-ray files from MakeMKV. I've included the handbrake preset file below for your convenience. Simply save as a `.json` file and import to Handbrake. Make sure to check your subtitle settings, since Handbrake doesn't seem to get them correct even with a preset.
+1. I would recommend you sort out your encoding pipeline ahead of time to make sure you have videos in the appropriate format and bitrate for streaming via Jellyfin. I use Handbrake and the Nvidia NVEnc H.264 codec at 4000kbps for converting Blu-ray files from MakeMKV. I've included the handbrake preset file below for your convenience. Simply save as a `.json` file and import to Handbrake.
 
 ```
 {
   "PresetList": [
     {
-      "AlignAVStart": true,
+      "AlignAVStart": false,
       "AudioCopyMask": [
         "copy:aac",
         "copy:ac3",
@@ -61,17 +61,17 @@ Forgive me, some of these are basic, but I list them here for less technical use
       "ChapterMarkers": true,
       "ChildrenArray": [],
       "Default": false,
-      "FileFormat": "mp4",
+      "FileFormat": "mkv",
       "Folder": false,
       "FolderOpen": false,
-      "Mp4HttpOptimize": true,
+      "Mp4HttpOptimize": false,
       "Mp4iPodCompatible": false,
       "PictureAutoCrop": true,
-      "PictureBottomCrop": 22,
-      "PictureLeftCrop": 0,
-      "PictureRightCrop": 0,
-      "PictureTopCrop": 22,
-      "PictureDARWidth": 1920,
+      "PictureBottomCrop": 0,
+      "PictureLeftCrop": 236,
+      "PictureRightCrop": 236,
+      "PictureTopCrop": 0,
+      "PictureDARWidth": 0,
       "PictureDeblockPreset": "off",
       "PictureDeblockTune": "medium",
       "PictureDeblockCustom": "strength=strong:thresh=20:blocksize=8",
@@ -95,12 +95,11 @@ Forgive me, some of these are basic, but I list them here for less technical use
       "PictureLooseCrop": false,
       "PictureModulus": 2,
       "PicturePAR": "auto",
-      "PicturePARWidth": 1,
-      "PicturePARHeight": 1,
+      "PicturePARWidth": 0,
+      "PicturePARHeight": 0,
       "PictureForceHeight": 0,
       "PictureForceWidth": 0,
-      "PresetDescription": "Preset for HD Jellyfin streaming",
-      "PresetName": "jellyfin-streaming",
+      "PresetName": "jellyfin-streaming-mkv",
       "Type": 1,
       "UsesPictureFilters": false,
       "UsesPictureSettings": 2,
@@ -235,7 +234,7 @@ If you want to totally wipe out your infrastructure, you can do the following:
 
 * This Terraform setup is not the most secure it could be, in that it leaves SSH open to the public internet. This is for the sake of simplicity since I don't believe most of you are controlling NORAD from your Jellyfin server (I hope).
 * This setup just uses `crontab` to run `aws s3 sync` every few minutes to update your media library from S3. Again, feel free to customize, and if you come up with a way more awesome solution please create a PR!
-* This setup also uses `aws s3 sync` to back up your Jellyfin config every hour. This is a good stopgap for when you have to re-create your infrastructure, but if you come up with a better solution for backups, again, please create a PR!
+* This setup also uses `aws s3 sync` to back up your Jellyfin config every 6 hours.
 * This project uses docker-compose to run Terraform commands inside a Terraform container to avoid having to deal with configuration issues on your local machine. Each docker-compose `.yml` file has a separate command and environment variable mapping. I like this setup because it's easy to use, easy to version, and easy to modify. If you don't like this, I'm always open to suggestions.
 * For simplicity, the paths in the setup and start scripts are absolute paths and cannot be configured. If you need to run jellyfin and the associated services from different folders, feel free to configure the terraform code as you like, or upgrade it to support configurable folder paths.
 * You'll notice that I run `dos2unix` on the scripts that Terraform creates. This is because I've been developing this on both Windows and Linux, and discovered that on Windows, Terraform created files with Windows line endings, causing the scripts to fail in really weird ways. The better solution is probably to not use provisioners like this, but it works well for a small project like this.
